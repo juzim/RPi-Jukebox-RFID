@@ -15,8 +15,8 @@ import sys
 #  SETTINGS
 # ----------------------------------------------------------
 DEBUG = False
-mqttBaseTopic = "phoniebox"             # MQTT base topic
-mqttClientId = "phoniebox-tobezimmer"              # MQTT client ID
+mqttBaseTopic = "phoniebox/tag_scanned"             # MQTT base topic
+mqttClientId = "phoniebox"              # MQTT client ID
 mqttHostname = "192.168.178.3"                # MQTT server hostname
 mqttPort = 1883                         # MQTT server port (typically 1883 for unencrypted, 8883 for encrypted)
 mqttUsername = "mqtt"                       # username for user/pass based authentication
