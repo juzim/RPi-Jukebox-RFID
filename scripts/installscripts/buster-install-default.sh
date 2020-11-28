@@ -498,6 +498,59 @@ config_spotify() {
     read -rp "Hit ENTER to proceed to the next step." INPUT
 }
 
+config_mqtt() {
+    #####################################################
+    # Configure mqtt
+
+    clear
+
+    echo "#####################################################
+#
+# OPTIONAL: INCLUDE MQTT
+#
+# Note: if this is your first time installing a phoniebox
+# it might be best to do a test install without MQTT
+# to make sure all your hardware works.
+#
+# If you want to include MQTT, MUST have your
+# credentials ready:
+#
+# * hostname
+# * port
+# * username
+# * passwort (or certificates)
+"
+    read -rp "Do you want to enable MQTT? [Y/n] " response
+    case "$response" in
+        [nN][oO]|[nN])
+            MQTTinstall=NO
+            echo "You don't want MQTT support."
+            ;;
+        *)
+            MQTTinstall=YES
+            clear
+            echo "#####################################################
+#
+# CREDENTIALS for MQTT
+# 
+"
+            read -rp "Type your MQTT hostname: " MQTThost
+            read -rp "Type your MQTT port: " MQTTport
+            read -rp "Type your MQTT username: " MQTTuser
+            read -rp "Type your MQTT password: " MQTTpass #@todo add certificates
+            ;;
+    esac
+    # append variables to config file
+    {
+        echo "MQTTinstall=\"$MQTTinstall\"";
+        echo "MQTThost=\"$MQTThost\"";
+        echo "MQTTport=\"$MQTTport\"";
+        echo "MQTTuser=\"$MQTTuser\"";
+        echo "MQTTpass=\"$MQTTpass\""
+    } >> "${HOME_DIR}/PhonieboxInstall.conf"
+    read -rp "Hit ENTER to proceed to the next step." INPUT
+}
+
 config_mpd() {
     #####################################################
     # Configure MPD
@@ -650,6 +703,18 @@ check_config_file() {
             check_variable "SPOTIclientsecret"
         fi
     fi
+    
+    if [[ -z "${MQTTinstall+x}" ]]; then
+        echo "ERROR: \$MQTTinstall is missing or not set!" && fail=true
+    else
+        if [ "$MQTTinstall" == "YES" ]; then
+            check_variable "MQTTuser"
+            check_variable "MQTTIpassword"
+            check_variable "MQTThost"
+            check_variable "MQTTport" # @todo add topic/devicename
+        fi
+    fi
+    
     check_variable "MPDconfig"
     check_variable "DIRaudioFolders"
     check_variable "GPIOconfig"
@@ -673,6 +738,13 @@ samba_config() {
     sudo sed -i 's|%DIRaudioFolders%|'"$DIRaudioFolders"'|' "${smb_conf}"
     # Samba: create user 'pi' with password 'raspberry'
     (echo "raspberry"; echo "raspberry") | sudo smbpasswd -s -a pi
+}
+
+mqtt_config() {
+    echo host: "$MQTThost" > "${jukebox_dir}"/settings/mqtt.yaml # @todo other format?
+    echo port: "$MQTTport" > "${jukebox_dir}"/settings/mqtt.yaml 
+    echo user: "$MQTTuser" > "${jukebox_dir}"/settings/mqtt.yaml 
+    echo password: "$MQTTpassword" > "${jukebox_dir}"/settings/mqtt.yaml 
 }
 
 web_server_config() {
@@ -826,10 +898,23 @@ install_main() {
         # Install necessary Python packages
         sudo python3 -m pip install --upgrade --force-reinstall -q -r "${jukebox_dir}"/requirements-spotify.txt
     fi
-
+    
     # Install more required packages
     echo "Installing additional Python packages..."
     sudo python3 -m pip install --upgrade --force-reinstall -q -r "${jukebox_dir}"/requirements.txt
+    
+    if [ "${MQTTinstall}" == "YES" ]; then
+        echo "Installing dependencies for MQTT..."
+
+        # Install necessary Python packages
+        sudo python3 -m pip install --upgrade --force-reinstall -q paho-mqtt #@todo move to own requirements file
+        # @todo install daemon
+        
+        mqtt_config
+        
+        sudo cp "${jukebox_dir}"/components/smart-home-automation/MQTT-protocol/phoniebox-mqtt-client.service.stretch-default.sample "${systemd_dir}"/phoniebox-mqtt-client.service
+
+    fi
     
     samba_config
 
@@ -881,12 +966,14 @@ install_main() {
     sudo systemctl disable gpio-buttons
     sudo systemctl disable phoniebox-rotary-encoder
     sudo systemctl disable phoniebox-gpio-buttons.service
+    sudo systemctl disable phoniebox-mqtt-client.service
     sudo rm "${systemd_dir}"/rfid-reader.service
     sudo rm "${systemd_dir}"/startup-sound.service
     sudo rm "${systemd_dir}"/gpio-buttons.service
     sudo rm "${systemd_dir}"/idle-watchdog.service
     sudo rm "${systemd_dir}"/phoniebox-rotary-encoder.service
     sudo rm "${systemd_dir}"/phoniebox-gpio-buttons.service
+    sudo rm "${systemd_dir}"/phoniebox-mqtt-client.service
     echo "### Done with erasing old daemons. Stop ignoring errors!"
     # 2. install new ones - this is version > 1.1.8-beta
     sudo cp "${jukebox_dir}"/misc/sampleconfigs/phoniebox-rfid-reader.service.stretch-default.sample "${systemd_dir}"/phoniebox-rfid-reader.service
@@ -903,6 +990,9 @@ install_main() {
     #startup sound is part of phoniebox-startup-scripts now
     #sudo systemctl enable phoniebox-startup-sound
     sudo systemctl enable phoniebox-startup-scripts
+    if [ "$MQTTinstall" == "YES" ]; then
+        sudo systemctl enable phoniebox-mqtt-client.service
+    fi
     # copy mp3s for startup and shutdown sound to the right folder
     cp "${jukebox_dir}"/misc/sampleconfigs/startupsound.mp3.sample "${jukebox_dir}"/shared/startupsound.mp3
     cp "${jukebox_dir}"/misc/sampleconfigs/shutdownsound.mp3.sample "${jukebox_dir}"/shared/shutdownsound.mp3
