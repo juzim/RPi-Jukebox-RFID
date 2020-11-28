@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 import paho.mqtt.client as mqtt
-import os, subprocess, re, ssl, time, datetime
-import sys
+import os, subprocess, re, ssl, time, datetime, configparser, sys
 
 
 # ----------------------------------------------------------
@@ -14,13 +13,16 @@ import sys
 # ----------------------------------------------------------
 #  SETTINGS
 # ----------------------------------------------------------
+config = configparser.ConfigParser()
+config.read('../settings/mqtt.conf')
+default_config = config['DEFAULT']
 DEBUG = False
 mqttBaseTopic = "phoniebox/tag_scanned"             # MQTT base topic
 mqttClientId = "phoniebox"              # MQTT client ID
-mqttHostname = "192.168.178.3"                # MQTT server hostname
-mqttPort = 1883                         # MQTT server port (typically 1883 for unencrypted, 8883 for encrypted)
-mqttUsername = "mqtt"                       # username for user/pass based authentication
-mqttPassword = "mqtt"                       # password for user/pass based authentication
+mqttHostname = default_config['host']                # MQTT server hostname
+mqttPort = default_config['port']                         # MQTT server port (typically 1883 for unencrypted, 8883 for encrypted)
+mqttUsername = default_config['username']                       # username for user/pass based authentication
+mqttPassword = default_config['password']                       # password for user/pass based authentication
 mqttCA = ""    # path to server certificate for certificate-based authentication
 mqttCert = ""    # path to client certificate for certificate-based authentication
 mqttKey = ""     # path to client keyfile for certificate-based authentication
@@ -58,4 +60,3 @@ def on_publish(client,userdata,result):             #create function for callbac
     pass
 
 client.publish(mqttBaseTopic + "/" + mqttClientId, sys.argv[1])
-
