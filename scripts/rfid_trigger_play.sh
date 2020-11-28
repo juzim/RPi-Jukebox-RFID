@@ -3,7 +3,7 @@
 # Reads the card ID or the folder name with audio files
 # from the command line (see Usage).
 # Then attempts to get the folder name from the card ID
-# or play audio folder content directly
+# Or play audio folder content directly
 #
 # Usage for card ID
 # ./rfid_trigger_play.sh -i=1234567890
@@ -271,6 +271,9 @@ if [ "$CARDID" ]; then
         $CMDREADWIFIIP)
             $PATHDATA/playout_controls.sh -c=readwifiipoverspeaker
             ;;
+	$CMDTAGSCANNED)
+	    $PATHDATA/send_mqtt_message.py $CARDID
+	    ;;
         *)
 
             # We checked if the card was a special command, seems it wasn't.
