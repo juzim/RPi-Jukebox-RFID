@@ -741,10 +741,10 @@ samba_config() {
 }
 
 mqtt_config() {
-    echo host: "$MQTThost" > "${jukebox_dir}"/settings/mqtt.yaml # @todo other format?
-    echo port: "$MQTTport" > "${jukebox_dir}"/settings/mqtt.yaml 
-    echo user: "$MQTTuser" > "${jukebox_dir}"/settings/mqtt.yaml 
-    echo password: "$MQTTpassword" > "${jukebox_dir}"/settings/mqtt.yaml 
+    echo host = "$MQTThost" > "${jukebox_dir}"/settings/mqtt.conf
+    echo port = "$MQTTport" > "${jukebox_dir}"/settings/mqtt.conf 
+    echo user = "$MQTTuser" > "${jukebox_dir}"/settings/mqtt.conf 
+    echo password = "$MQTTpassword" > "${jukebox_dir}"/settings/mqtt.conf 
 }
 
 web_server_config() {
